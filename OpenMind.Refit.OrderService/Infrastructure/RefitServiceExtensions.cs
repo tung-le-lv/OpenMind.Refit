@@ -9,21 +9,23 @@ public static class RefitServiceExtensions
     {
         services.AddTransient<AuthHeaderHandler>();
 
-        // AddRefitClient registers the Refit interface with HttpClientFactory
-        // RefitSettings allows customizing serialization (System.Text.Json or Newtonsoft.Json)
-        services
-            .AddRefitClient<IExternalOrderApi>(new RefitSettings
+        var refitSettings = new RefitSettings
+        {
+            // RefitSettings allows customizing serialization (System.Text.Json or Newtonsoft.Json)
+            ContentSerializer = new SystemTextJsonContentSerializer(new System.Text.Json.JsonSerializerOptions
             {
-                ContentSerializer = new SystemTextJsonContentSerializer(new System.Text.Json.JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
-                    WriteIndented = false,
-                    DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
-                })
+                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+                WriteIndented = false,
+                DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
             })
+        };
+
+        // AddRefitClient registers the Refit interface with HttpClientFactory for PaymentGateway
+        services
+            .AddRefitClient<IPaymentGatewayApi>(refitSettings)
             .ConfigureHttpClient(client =>
             {
-                var baseUrl = configuration["ExternalApi:BaseUrl"] ?? "https://api.example.com";
+                var baseUrl = configuration["PaymentGateway:BaseUrl"] ?? "http://localhost:5132";
                 client.BaseAddress = new Uri(baseUrl);
                 client.Timeout = TimeSpan.FromSeconds(30);
             })

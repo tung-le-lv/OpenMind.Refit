@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http.HttpResults;
-using OpenMind.Refit.OrderService.ExternalApis;
-using Refit;
+using Microsoft.AspNetCore.Mvc;
+using OpenMind.Refit.OrderService.Domain;
+using OpenMind.Refit.OrderService.Infrastructure;
 
 namespace OpenMind.Refit.OrderService.Features.Orders.GetOrder;
 
@@ -12,52 +13,19 @@ public static class GetOrderEndpoint
             .WithName("GetOrder")
             .WithTags("Orders")
             .WithSummary("Get order by ID")
-            .WithDescription("Retrieves a single order from the external API using Refit")
+            .WithDescription("Retrieves a single order from the database")
             .Produces<GetOrderResponse>()
             .Produces(StatusCodes.Status404NotFound);
     }
 
     private static async Task<Results<Ok<GetOrderResponse>, NotFound<ProblemDetails>>> HandleAsync(
         int id,
-        IExternalOrderApi orderApi,
+        IOrderRepository orderRepository,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            // ApiResponse<T> provides access to HTTP response metadata (status, headers) along with the deserialized content
-            var response = await orderApi.GetOrderWithMetadataAsync(id);
+        var order = await orderRepository.GetByIdAsync(id, cancellationToken);
 
-            if (!response.IsSuccessStatusCode || response.Content is null)
-            {
-                return TypedResults.NotFound(new ProblemDetails
-                {
-                    Title = "Order not found",
-                    Detail = $"Order with ID {id} was not found",
-                    Status = StatusCodes.Status404NotFound
-                });
-            }
-
-            var order = response.Content;
-            return TypedResults.Ok(new GetOrderResponse
-            {
-                Id = order.Id,
-                CustomerName = order.CustomerName,
-                CustomerEmail = order.CustomerEmail,
-                Items = order.Items.Select(i => new GetOrderResponse.OrderItemResponse
-                {
-                    Id = i.Id,
-                    ProductName = i.ProductName,
-                    Quantity = i.Quantity,
-                    UnitPrice = i.UnitPrice,
-                    TotalPrice = i.TotalPrice
-                }).ToList(),
-                TotalAmount = order.TotalAmount,
-                Status = order.Status,
-                CreatedAt = order.CreatedAt,
-                UpdatedAt = order.UpdatedAt
-            });
-        }
-        catch (ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        if (order is null)
         {
             return TypedResults.NotFound(new ProblemDetails
             {
@@ -66,6 +34,25 @@ public static class GetOrderEndpoint
                 Status = StatusCodes.Status404NotFound
             });
         }
+
+        return TypedResults.Ok(new GetOrderResponse
+        {
+            Id = order.Id,
+            CustomerName = order.CustomerName,
+            CustomerEmail = order.CustomerEmail,
+            Items = order.Items.Select(i => new GetOrderResponse.OrderItemResponse
+            {
+                Id = i.Id,
+                ProductName = i.ProductName,
+                Quantity = i.Quantity,
+                UnitPrice = i.UnitPrice,
+                TotalPrice = i.Quantity * i.UnitPrice
+            }).ToList(),
+            TotalAmount = order.TotalAmount,
+            Status = order.Status,
+            CreatedAt = order.CreatedAt,
+            UpdatedAt = order.UpdatedAt
+        });
     }
 }
 

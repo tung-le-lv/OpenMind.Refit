@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using OpenMind.Refit.OrderService.Features;
 using OpenMind.Refit.OrderService.Infrastructure;
 
@@ -5,6 +6,12 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// Register EF Core with In-Memory database
+builder.Services.AddDbContext<OrderDbContext>(options =>
+    options.UseInMemoryDatabase("OrderDb"));
+
+builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 
 // Register Refit clients for external API communication
 builder.Services.AddRefitClients(builder.Configuration);

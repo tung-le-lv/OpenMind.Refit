@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Http.HttpResults;
-using OpenMind.Refit.OrderService.ExternalApis;
-using OpenMind.Refit.OrderService.ExternalApis.Contracts;
-using Refit;
+using Microsoft.AspNetCore.Mvc;
+using OpenMind.Refit.OrderService.Domain;
+using OpenMind.Refit.OrderService.Infrastructure;
 
 namespace OpenMind.Refit.OrderService.Features.Orders.CreateOrder;
 
@@ -13,14 +13,14 @@ public static class CreateOrderEndpoint
             .WithName("CreateOrder")
             .WithTags("Orders")
             .WithSummary("Create a new order")
-            .WithDescription("Creates a new order via the external API using Refit")
+            .WithDescription("Creates a new order in the database")
             .Produces<CreateOrderResponse>(StatusCodes.Status201Created)
             .Produces<ProblemDetails>(StatusCodes.Status400BadRequest);
     }
 
     private static async Task<Results<Created<CreateOrderResponse>, BadRequest<ProblemDetails>>> HandleAsync(
         CreateOrderRequest request,
-        IExternalOrderApi orderApi,
+        IOrderRepository orderRepository,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(request.CustomerName))
@@ -43,60 +43,42 @@ public static class CreateOrderEndpoint
             });
         }
 
-        try
+        var order = new Order
         {
-            // ApiResponse<T> allows accessing response headers (e.g., Location) after the request
-            var apiRequest = new ExternalApis.Contracts.CreateOrderRequest
+            CustomerName = request.CustomerName,
+            CustomerEmail = request.CustomerEmail,
+            Items = request.Items.Select(item => new OrderItem
             {
-                CustomerName = request.CustomerName,
-                CustomerEmail = request.CustomerEmail,
-                Items = request.Items.Select(i => new CreateOrderItemRequest
-                {
-                    ProductName = i.ProductName,
-                    Quantity = i.Quantity,
-                    UnitPrice = i.UnitPrice
-                }).ToList()
-            };
+                ProductName = item.ProductName,
+                Quantity = item.Quantity,
+                UnitPrice = item.UnitPrice
+            }).ToList(),
+            TotalAmount = request.Items.Sum(i => i.Quantity * i.UnitPrice),
+            Status = "Pending",
+            CreatedAt = DateTime.UtcNow
+        };
 
-            var response = await orderApi.CreateOrderWithMetadataAsync(apiRequest);
+        await orderRepository.AddAsync(order, cancellationToken);
 
-            if (!response.IsSuccessStatusCode || response.Content is null)
-            {
-                return TypedResults.BadRequest(new ProblemDetails
-                {
-                    Title = "Failed to create order",
-                    Detail = response.Error?.Content ?? "Unknown error occurred",
-                    Status = StatusCodes.Status400BadRequest
-                });
-            }
-
-            var createdOrder = response.Content;
-            var result = new CreateOrderResponse
-            {
-                Id = createdOrder.Id,
-                CustomerName = createdOrder.CustomerName,
-                CustomerEmail = createdOrder.CustomerEmail,
-                TotalAmount = createdOrder.TotalAmount,
-                Status = createdOrder.Status,
-                CreatedAt = createdOrder.CreatedAt
-            };
-
-            // Access Location header from ApiResponse
-            var locationHeader = response.Headers.Location?.ToString();
-
-            return TypedResults.Created(
-                locationHeader ?? $"/api/orders/{createdOrder.Id}",
-                result);
-        }
-        catch (ApiException ex)
+        var result = new CreateOrderResponse
         {
-            return TypedResults.BadRequest(new ProblemDetails
+            Id = order.Id,
+            CustomerName = order.CustomerName,
+            CustomerEmail = order.CustomerEmail,
+            TotalAmount = order.TotalAmount,
+            Status = order.Status,
+            Items = order.Items.Select(i => new CreateOrderResponse.OrderItemResponse
             {
-                Title = "API Error",
-                Detail = ex.Content ?? ex.Message,
-                Status = StatusCodes.Status400BadRequest
-            });
-        }
+                Id = i.Id,
+                ProductName = i.ProductName,
+                Quantity = i.Quantity,
+                UnitPrice = i.UnitPrice,
+                TotalPrice = i.Quantity * i.UnitPrice
+            }).ToList(),
+            CreatedAt = order.CreatedAt
+        };
+
+        return TypedResults.Created($"/api/orders/{order.Id}", result);
     }
 }
 
@@ -105,13 +87,13 @@ public class CreateOrderRequest
     public string CustomerName { get; set; } = string.Empty;
     public string CustomerEmail { get; set; } = string.Empty;
     public List<CreateOrderItemRequest> Items { get; set; } = [];
+}
 
-    public class CreateOrderItemRequest
-    {
-        public string ProductName { get; set; } = string.Empty;
-        public int Quantity { get; set; }
-        public decimal UnitPrice { get; set; }
-    }
+public class CreateOrderItemRequest
+{
+    public string ProductName { get; set; } = string.Empty;
+    public int Quantity { get; set; }
+    public decimal UnitPrice { get; set; }
 }
 
 public class CreateOrderResponse
@@ -119,7 +101,17 @@ public class CreateOrderResponse
     public int Id { get; set; }
     public string CustomerName { get; set; } = string.Empty;
     public string CustomerEmail { get; set; } = string.Empty;
+    public List<OrderItemResponse> Items { get; set; } = [];
     public decimal TotalAmount { get; set; }
     public string Status { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
+
+    public class OrderItemResponse
+    {
+        public int Id { get; set; }
+        public string ProductName { get; set; } = string.Empty;
+        public int Quantity { get; set; }
+        public decimal UnitPrice { get; set; }
+        public decimal TotalPrice { get; set; }
+    }
 }
