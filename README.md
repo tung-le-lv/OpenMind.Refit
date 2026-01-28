@@ -8,6 +8,7 @@ This service demonstrates:
 - **Refit** for type-safe HTTP client generation
 - **Vertical Slice Architecture** with features organized by use case
 - **Minimal APIs** with .NET 10
+- **EF Core In-Memory Database** for data persistence
 - Service-to-service communication using Refit
 
 ## Endpoints
@@ -15,13 +16,19 @@ This service demonstrates:
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/api/orders/place` | **Place order with payment** (calls PaymentGateway via Refit) |
-| GET | `/api/orders` | Get all orders |
 | GET | `/api/orders/{id}` | Get order by ID |
 | POST | `/api/orders` | Create a new order |
-| PUT | `/api/orders/{id}` | Update an order |
-| PATCH | `/api/orders/{id}/status` | Update order status |
-| DELETE | `/api/orders/{id}` | Delete an order |
-| GET | `/api/customers/{customerId}/orders` | Get customer orders |
+
+## Database
+
+This service uses **EF Core In-Memory Database** for simplicity:
+
+```csharp
+builder.Services.AddDbContext<OrderDbContext>(options =>
+    options.UseInMemoryDatabase("OrderDb"));
+```
+
+**Note:** No connection string is required for In-Memory database - just the database name. Data exists only in memory and is lost when the application stops. This is ideal for demo/development purposes.
 
 ## Refit Integration
 

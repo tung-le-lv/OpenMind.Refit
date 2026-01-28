@@ -7,9 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Register EF Core with In-Memory database
-builder.Services.AddDbContext<OrderDbContext>(options =>
-    options.UseInMemoryDatabase("OrderDb"));
+builder.Services.AddDbContext<OrderDbContext>(options => options.UseInMemoryDatabase("OrderDb"));
 
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 

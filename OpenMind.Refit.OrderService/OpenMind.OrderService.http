@@ -1,0 +1,31 @@
+@baseUrl = http://localhost:5020
+
+### Place Order with Payment (calls PaymentGateway via Refit)
+POST {{baseUrl}}/api/orders/place
+Content-Type: application/json
+
+{
+  "customerName": "Jane Smith",
+  "customerEmail": "jane.smith@example.com",
+  "items": [
+    {
+      "productName": "Keyboard",
+      "quantity": 1,
+      "unitPrice": 149.99
+    },
+    {
+      "productName": "Monitor",
+      "quantity": 2,
+      "unitPrice": 299.99
+    }
+  ],
+  "currency": "USD",
+  "paymentMethod": "CreditCard",
+  "card": {
+    "cardNumber": "4111111111111111",
+    "cardHolderName": "Jane Smith",
+    "expiryMonth": "12",
+    "expiryYear": "2026",
+    "cvv": "123"
+  }
+}
