@@ -1,0 +1,6 @@
+@OpenMind.Refit.OrderService_HostAddress = http://localhost:5012
+
+GET {{OpenMind.Refit.OrderService_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
