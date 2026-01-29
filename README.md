@@ -1,25 +1,12 @@
-# OpenMind Order Service
-
-Order Management Service with **Refit** integration for calling the Payment Gateway.
-
 ## Overview
 
-This service demonstrates:
-- **Refit** for type-safe HTTP client generation
-- **Vertical Slice Architecture** with features organized by use case
-- **Minimal APIs** with .NET 10
-- **EF Core In-Memory Database** for data persistence
-- Service-to-service communication using Refit
+Refit is an automatic type-safe REST library for .NET that simplifies consuming RESTful APIs. It reduces the boilerplate code associated with standard HttpClient usage by allowing developers to define API endpoints as simple C# interfaces with attributes, which Refit then implements automatically at build time. 
 
-## Endpoints
+## Reference
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/orders/place` | **Place order with payment** (calls PaymentGateway via Refit) |
-| GET | `/api/orders/{id}` | Get order by ID |
-| POST | `/api/orders` | Create a new order |
+https://github.com/reactiveui/refit
 
-## Database
+## Setup
 
 This service uses **EF Core In-Memory Database** for simplicity:
 
@@ -61,25 +48,3 @@ services
     })
     .AddHttpMessageHandler<AuthHeaderHandler>();
 ```
-
-## Running the Service
-
-```bash
-# Ensure PaymentGateway is running first on port 5132
-dotnet run
-# Runs on http://localhost:5012
-```
-
-## Configuration
-
-```json
-{
-  "PaymentGateway": {
-    "BaseUrl": "http://localhost:5132"
-  }
-}
-```
-
-## Swagger
-
-Open http://localhost:5012/ in your browser.
